@@ -9,11 +9,7 @@ Here is my github project: <https://github.com/ukkelinkamu/IODS-project>
 I'm somewhat familiar with R and using ggplot so this was not too difficult. Still had to think a little bit before could get the 4.6.5 excercise done (below). I also did like the final graphs in chapter 4, maybe could have some ideas from here to my own work also. R markdown is great way to approach this I think.
 
 ```{r}
-gapdata2007 %>% 
-  filter(continent %in% c("Europe")) %>% 
-  ggplot(aes(x = lifeExp,
-             y = fct_reorder(country, lifeExp, .fun=max))) +
-  geom_col(fill = NA, colour = "deepskyblue");
+date()
 
 ```
 
