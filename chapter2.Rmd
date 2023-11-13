@@ -1,4 +1,4 @@
-# Regression
+# Chapter 2 - Regression
 
 *We have learned basics of doing regression models and summaraising the data*
 
