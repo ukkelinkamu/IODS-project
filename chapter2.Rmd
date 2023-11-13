@@ -1,4 +1,4 @@
-# Insert chapter 2 title here
+# Regression
 
 *Describe the work you have done this week and summarize your learning.*
 
@@ -7,6 +7,45 @@
 - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
 ```{r}
+#I created a csv file in the previous task so I start by reading it
+df <- read.csv("a_learn14.csv")
+df <- df[,-1]
+#exploring the structure and dimensions
+str(df)
+dim(df)
+#There seems to be 166 rows and 7 columns. The data is from student survey. the survey questions had 3 categories and in this dataset they are averaged to 3 columns: attitudes, deep, surf and stra. There is also columns for age and gender.
+
+#access the GGally and ggplot2 libraries
+library(GGally)
+library(ggplot2)
+
+
+pairs(df[-1])
+summary(df)
+p <- ggpairs(df, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+p
+
+#Respondents are young, mean 25.5 years old. 2/3 of respondents are female. The exam points correlate strongly with attitude related questions. 
+
+# fit a linear model
+my_model <- lm(Points ~ attitude+stra+surf, df)
+
+# print out a summary of the model
+my_model
+summary(my_model)
+
+#attitude is strongly and statistically significantly correlated with points. correlation coefficient is 3.4661 and p-value 1.18e^-08. Other correlations are not statistically significant.
+
+#new model without explanatory variables that were not statistically significantly correlated with points
+my_model <- lm(Points ~ attitude, df)
+
+#multiple r-squared is 0.1906, which is semi low and means that the data do not fit the model very well, data points are far away from the regression line on average. This can be also used to estimate if the model can predict how good points participant with specific attitudes would get, in this case the model predicts it badly.
+
+#diagnostic plots
+plot(my_model, which = c(1,2,5)) 
+
+#diagnostic plost show the model is valid. data points are equally scattered and the red line does not have large curves.
+
 date()
 ```
 

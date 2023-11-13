@@ -27,3 +27,4 @@ test <- read.csv("a_learn14.csv")
 
 str(test)
 head(test)
+as
