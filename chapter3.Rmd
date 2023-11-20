@@ -1,6 +1,6 @@
 # Chapter 3 - logistic regression
 
-*We have learned basics of logistic regression.*
+*We have learned basics of logistic regression*
 
 First, read the datafile. It is about student exams, including 370 respondents, and 36 variables about student characteristics and test performance.
 
