@@ -1,0 +1,96 @@
+# Chapter 3 - logistic regression
+
+*We have learned basics of logistic regression.*
+
+First, read the datafile. It is about student exams, including 370 respondents, and 36 variables about student characteristics and test performance.
+
+```{r}
+df <- read.csv("chap3.csv")
+colnames(df)
+```
+
+My hypothesis is that absences, failures, higher age and male sex is associated with high alcohol use.
+
+Participants are 15-19 years old. Absences are distributed mostly to people with many absences, most students have only few of them. Also most of the students have 0 failures.
+
+By reading the graphs, sex, absences, and age seems to be correlated with high alcohol use. failures are rare and more difficult to explore with these plots.
+
+```{r}
+library(ggplot2)
+library(tidyr)
+
+#defining interesting variables
+var <- c("failures", "absences", "age", "sex")
+summary(df)
+
+#drawing graphs of the variables of interest
+gather(df[,var]) %>% ggplot(aes(value)) + geom_bar() + facet_wrap("key", scales = "free")
+
+#exploring associations with alcohol use
+g1 <- ggplot(df, aes(x = high_use, col = sex))
+g2 <- ggplot(df, aes(x = high_use, y = absences))
+g3 <- ggplot(df, aes(x = high_use, y = age))
+g4 <- ggplot(df, aes(x = high_use, y = failures))
+
+g1 + geom_bar()
+g2 + geom_boxplot()
+g3 + geom_boxplot()
+g4 + geom_boxplot()
+```
+
+Next, I define the model with the chosen variables.
+
+Summary tells that other variables but age were statistically significantly associated with high use of alcohol. Similar finding can be interpreted from OR and coefs. Biggest correlation was for sex and male sex having higher risk for high alcohol use.
+
+```{r}
+#defining the model
+model <- glm(high_use ~ absences + sex + age + failures, data = df, family = "binomial")
+
+summary(model)
+
+coef(model)
+
+# compute odds ratios (OR)
+OR <- coef(model) %>% exp
+
+# compute confidence intervals (CI)
+CI <- confint(model) %>% exp
+
+# print out the odds ratios with their confidence intervals
+cbind(OR, CI)
+
+
+```
+
+Next, I calculate a probability of high alcohol use based on the new model. By comparing the predictability and true values, we see that the model predicts quite badly if the participant is a high user or not. The model has about 70% chance of getting it right. the mean predictive error is 0.3, so about 30% of the predictions go wrong.
+
+```{r}
+library(dplyr)
+#new model with the significant variables
+model <- glm(high_use ~ absences + sex + failures, data = df, family = "binomial")
+
+# predict() the probability of high_use
+probabilities <- predict(model, type = "response")
+
+df <- mutate(df, probability = predict(model, type = "response"))
+df <- mutate(df, prediction = probability > 0.5)
+
+# initialize a plot of 'high_use' versus 'probability' in 'alc'
+g <- ggplot(df, aes(x = high_use, y = probability))
+
+# define the geom as points and draw the plot
+g + geom_point()
+
+# tabulate the target variable versus the predictions
+table(high_use = df$high_use, prediction = df$prediction)
+
+# define a loss function (mean prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# call loss_func to compute the average number of wrong predictions in the (training) data
+loss_func(class = df$high_use, prob = 0)
+
+```
