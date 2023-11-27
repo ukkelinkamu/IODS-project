@@ -1,0 +1,225 @@
+---
+title: "chapter4"
+output: html_document
+date: "2023-11-27"
+---
+
+# Clustering and classification
+
+First, I loaded the Boston dataset, which contains house price data from sity suburbs in Boston, and also including characteristics of the suburb areas like crime rate, age of the buildings and average number of rooms.
+
+The dataset has 506 rows and 14 columns.
+
+```{r setup, include=FALSE}
+# access the MASS package
+library(MASS)
+
+# load the data
+data("Boston")
+
+#structure and dimensions
+str(Boston)
+
+dim(Boston)
+```
+
+Next, taking summary and some graphical looks in the data...
+
+Distance from employment centers seems to have high negative correlation with many variables, esp. indus, nos and age. Positive correlations are more scattered.
+
+By drawing plots about median prices compared to other variables, unsurprisingly room numbers have the highest correlation.
+
+```{r setup, include=FALSE}
+#summary
+summary(Boston)
+
+# calculate the correlation matrix and round it
+cor_matrix <- cor(Boston) 
+
+# print the correlation matrix
+cor_matrix
+
+# visualize the correlation matrix
+library(corrplot)
+corrplot(cor_matrix, method="circle")
+
+#also exploring distributions in some of the key variables
+library(ggplot2)
+library(tidyr)
+var <- c("crim","age","rm","dis","medv")
+df <- Boston
+gather(df[,var]) %>% ggplot(aes(value)) + geom_bar() + facet_wrap("key", scales = "free")
+
+#exploring associations with alcohol use
+g1 <- ggplot(df, aes(x = medv, y = age))
+g2 <- ggplot(df, aes(x = medv, y = crim))
+g3 <- ggplot(df, aes(x = medv, y = rm))
+g4 <- ggplot(df, aes(x = medv, y = dis))
+
+g1 + geom_point()
+g2 + geom_count()
+g3 + geom_point()
+g4 + geom_point()
+```
+
+Next, I scale (or standardize) the dataset and create a categorical variable on quantiles of crime rate. Scaling transforms the variables to difference from average per standard deviation.
+
+Variables are now distributed under and over zero as they are measuring the difference from average rather than the absolute value.
+
+Lastly, I made datasets from random 80% of rows and another from the remaining.
+
+```{r setup, include=FALSE}
+#scaling
+s_df <- scale(df)
+
+summary(s_df)
+
+#creating the dataframe and setting crime rate as a numerical variable
+s_df <- as.data.frame(scale(Boston))
+s_df$crim <- as.numeric(s_df$crim)
+
+#creating the cathegorical variable - first find the quantiles
+bins <- quantile(s_df$crim)
+bins
+
+# create a categorical variable 'crime'
+crime <- cut(s_df$crim, breaks = bins, include.lowest = TRUE)
+
+#adding the variable to the dataset
+s_df <- dplyr::select(s_df, -crim)
+s_df <- data.frame(s_df, crime)
+
+#converting cathegories to low, med_low, med_high and high
+s_df$crime1 <- ifelse(s_df$crime == "[-0.419,-0.411]","low",ifelse(s_df$crime == "(-0.411,-0.39]","med_low",
+       ifelse(s_df$crime == "(-0.39,0.00739]","med_high","high")))
+
+#choosing random 80%
+ind <- sample(506,  size = n * 0.8)
+
+#train dataset including 80% of rows
+train <- s_df[ind,]
+
+# create test set with remaining
+test <- s_df[-ind,]
+```
+
+Next, i performed a linear discriminant analysis.
+
+Rad (index of accessibility to radial highways), has the biggest correlation an so has the highest contribution to first and second discriminant. The first linear discriminant has about 95% of the predictive power in separating the categories.
+
+Biplot describes the same phenomena, on the x-axis LD1 (first dicriminant) shows clear separation of the categories, and arrow showing the correlation for rad is the largest and so having the most influense in the separation between categories.
+
+```{r setup, include=FALSE}
+#formula for the analysis
+colnames(train)
+lda.fit <- lda(crime ~ zn + indus + chas + nox + rm + age + dis + 
+                 rad + tax + ptratio + black + lstat + medv, data = train)
+lda.fit
+
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  graphics::arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+# target classes as numeric
+classes <- as.numeric(train$crime)
+
+# plot the lda results
+plot(lda.fit, dimen = 2)
+lda.arrows(lda.fit, myscale = 1)
+```
+
+Next, I test if the model can predict the crime categories well. crime categories were already saved to crime1 variable, so I do not have to do it here.
+
+All high crime areas were rightly predicted, also med-low category was well predicted, other 2 categories did not go so well.
+
+```{r setup, include=FALSE}
+
+#I already saved the variable to crime1 before
+#removing the crime variable
+test <- dplyr::select(test, -crime)
+
+# predict classes with test data
+lda.pred <- predict(lda.fit, newdata = test)
+lda.pred
+
+# cross tabulate the results
+table(correct = test$crime1, predicted = lda.pred$class)
+
+
+```
+
+Next, reload and standardize the boston dataset.
+
+Then, I try to determine the optimal number of clusters. This can be done by looking when total of within cluster sum of squares drops radically when increasing the number of clusters. This time it seems to be number 2.
+
+Interpretation of the plot: again we see that rad is the best predictor for clustering (separates black and red dots) and works as well with different other variables. Tax could be the second best.
+
+```{r setup, include=FALSE}
+#reload and scale
+data("Boston")
+df <- scale(Boston)
+
+#distances
+dist_df <- dist(df)
+summary(dist_df)
+
+#k-means
+km <- kmeans(df, centers = 4)
+
+# determine the number of clusters
+k_max <- 10
+
+# calculate the total within sum of squares
+twcss <- sapply(1:k_max, function(k){kmeans(df, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+
+# k-means clustering
+km <- kmeans(df, centers = 2)
+
+# plot the Boston dataset with clusters
+pairs(df, col = km$cluster)
+
+```
+
+**Bonus**
+
+First, reloading boston dataset and scaling it.
+
+In the biplot on the x-axis LD1 (first dicriminant) shows clear separation of the categories, and arrow showing the correlation for rad is the largest and so having the most influense in the separation between categories.
+
+```{r setup, include=FALSE}
+# access the MASS package
+library(MASS)
+
+# load the data
+data("Boston")
+
+#scaling and forming a dataframe
+scaled <- as.data.frame(scale(Boston))
+
+lda_df <- lda(crime ~ zn + indus + chas + nox + rm + age + dis + 
+                 rad + tax + ptratio + black + lstat + medv, data = train)
+
+# the function for arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  graphics::arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+# target classes as numeric
+classes <- as.numeric(scaled$crime)
+
+# plot the lda results
+plot(lda_df, dimen = 2)
+lda.arrows(lda_df, myscale = 1)
+```
