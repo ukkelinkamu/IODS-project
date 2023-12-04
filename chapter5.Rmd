@@ -1,0 +1,87 @@
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# Chapter 5
+
+First, lets set the rownames to country names and explore the data and distributions
+
+```{r}
+#setting rownames to countries
+
+df <- read.csv("human.csv")
+row.names(df) <- df$Country
+df <- df[,2:9]
+
+#exploring the data and distributions
+library(GGally)
+
+ggpairs(df)
+
+library(corrplot)
+cor(df) %>% corrplot()
+```
+
+Maternal mortality and life expectancy are highly correlated as well as adolecent birth rate and maternal mortality. Also some other very logical correlations like life expectancy and expected years of schooling. Distributions of ado.birth, mat.mort, GNI, and life.exp are highly skewed, other distribution look more symmetric/normal.
+
+Performing principal component analysis. First, is the standardized data analysis.
+
+```{r}
+#standardization
+df_s <- scale(df)
+
+# print out summaries of the standardized variables
+summary(df_s)
+
+# perform principal component analysis (with the SVD method)
+pca_df <- prcomp(df_s)
+pca_df
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca_df, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"))
+
+```
+
+Mat.mor and life.exp have the biggest correlation to the first principal component, explaning most in the variance. labor.ratio and parli.f give the largest correlation to the second principal component.
+
+Next lets do the same with non-standardized data.
+
+```{r}
+pca_df_n <- prcomp(df)
+pca_df_n
+biplot(pca_df_n, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"))
+
+summary(df)
+```
+
+The pca and plots are very different. As the data is non-standardised, GNI which has the largest scale and therefore largest number for variance/standard deviation, and will have the highest contiribution to PCA.
+
+The analysis suggests that as edu.ratio, edu.exp, life.exp, GNI, mat.mor and ado.birth have about similar correlations to component one, the tend also to correlate to each other as such that when one variable changes, so change the others, either to the same direction or to the other depending on +/-. The same counts for Parli.f and labor.ratio which had the highest correlations to component 2.
+
+Next, let's work with the tea data.
+
+```{r}
+#loading the data
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+
+library(FactoMineR)
+library(ggplot2)
+
+#exploring the data
+str(tea)
+dim(tea)
+
+#taking the firs 10 variables
+tea <- tea[,1:10]
+
+#performing the analysis and giving the summary
+mca <- MCA(tea, graph = FALSE)
+summary(mca)
+
+plot(mca, invisible=c("ind"), graph.type = "classic")
+plot(mca, invisible=c("ind"), graph.type = c("ggplot")) + theme(panel.grid.major = element_blank(),
+   plot.title=element_text(size=14, color="blue"),
+   axis.title = element_text(size=12, color="red"))
+```
+
+Tea-time, work, tearoom, and friends are strongly correlated to the firs dimension and as such tend to change together. Breakfast, evening are strongly correlated to the second dimension. lunch, always and work are strongly correlated to the third dimension.
