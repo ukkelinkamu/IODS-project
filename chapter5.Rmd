@@ -4,7 +4,7 @@
 
 # Chapter 5
 
-First, lets set the rownames to country names and explore the data and distributions
+First, lets set the rownames to country names and explore the data and distributions.
 
 ```{r}
 #setting rownames to countries
